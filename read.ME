@@ -1,0 +1,97 @@
+dy-log 通用动态日志级别调整工具
+
+使用帮助：
+
+
+在pom文件中引入：
+<!--maven 我们实验室自己的私服，需要配置镜像地址 私服地址可去实验室的资源文件中查看-->
+    <dependency>
+		<groupId>wsn.b405</groupId>
+		<artifactId>dynamic-log</artifactId>
+		<version>1.1-SNAPSHOT</version>
+		<exclusions>
+			<exclusion>
+				<groupId>org.springframework</groupId>
+				<artifactId>spring-core</artifactId>
+			</exclusion>
+			<exclusion>
+				<groupId>ch.qos.logback</groupId>
+				<artifactId>logback-classic</artifactId>
+			</exclusion>
+		</exclusions>
+	</dependency>
+
+
+spring工程：
+	
+在web.xml文件中配置如下servlet
+ <!-- 日志设置 -->
+    <servlet>
+        <servlet-name>log-servlet</servlet-name>
+        <servlet-class>wsn.b405.servlet.LogViewServlet</servlet-class>
+        <init-param>
+            <param-name>loginUsername</param-name>
+            <param-value>wh</param-value>
+        </init-param>
+        <init-param>
+            <param-name>loginPassword</param-name>
+            <param-value>123</param-value>
+        </init-param>
+        <init-param>
+            <param-name>allow</param-name>
+            <param-value>127.0.0.1</param-value>
+        </init-param>
+        <init-param>
+            <param-name>deny</param-name>
+            <param-value>222.00.22.22</param-value>
+        </init-param>
+        <init-param>
+            <param-name>loggerProfix</param-name>
+            <param-value>org.springframework</param-value>
+        </init-param>
+        <load-on-startup>10</load-on-startup>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>log-servlet</servlet-name>
+        <url-pattern>/log/*</url-pattern>
+    </servlet-mapping>
+    <!-- 日志配置结束 -->
+    
+springBoot 工程：
+
+创建一个Config类，配置如下信息：
+    @Value("${dynamic.log.user}") //登录名
+    private String loginUserName;
+    @Value("${dynamic.log.pass}") //登录密码
+    private String getLoginPassword;
+    @Value("${dynamic.log.allowIp}") //允许访问的ip列表
+    private String allow;
+    @Value("${dynamic.log.denyIp}") //拒绝访问的id，列表
+    private String deny;
+    @Value("${dynamic.log.profix}") //扫描前缀，默认全扫描【包括spring自身，还有其他依赖对象的Logger】
+    private  String loggerProfix;
+
+    @Bean
+    public ServletRegistrationBean logServlet() {
+        ServletRegistrationBean reg = new ServletRegistrationBean();
+        reg.setServlet(new LogViewServlet());
+        reg.addUrlMappings("/log/*");
+        reg.addInitParameter("loginUsername", loginUserName);
+        reg.addInitParameter("loginPassword", getLoginPassword);
+        reg.addInitParameter("allow",allow);
+        reg.addInitParameter("deny",deny);
+        reg.addInitParameter("loggerProfix",loggerProfix);
+        return reg;
+    }
+
+JavaSE:
+   启动工程之后再启动wsn.b405.console.Main，该类可以和用户通过命令交互（help命令查看所有功能）
+
+未解决问题：
+    1、分布式环境下，一个域名通常对应多个服务，如果域名无法知道修改了哪一个实例。
+    2、dy-log目前兼容了主流的日志框架但是没有做到完全兼容。
+    3、因该引入配置中心，应用所有的配置都从配置中心取，用户更新配置，通过配置下发让所有的实例同步更新。
+    4、改变所有日志的级别【需求是否存在？】
+
+ 注意事项：
+     在工程下不能同时有多个实现了sl4j-api的日志，否则启动报错【不知道绑定哪一个】

@@ -1,0 +1,68 @@
+<!doctype html>
+<html>
+<head>
+    <title class="lang" langKey="xxxx">DyLog Stat Index</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf8" />
+    <link href='css/bootstrap.min.css' rel="stylesheet" />
+    <link href="css/style.css" type="text/css" rel="stylesheet"/>
+    <script type="text/javascript" src="js/jquery.min.js"></script>
+    <script src="js/lang.js" type="text/javascript" charset="utf8"></script>
+    <script src="js/common.js" type="text/javascript" charset="utf8"></script>
+</head>
+<body>
+
+<div class="container">
+    <h3>
+        System Info
+        <a href="basicInfo.json" target="_blank" class="lang" langKey="ViewJSONAPI">View JSON API</a>
+    </h3>
+    <table id="dataTable" style="background-color: #fff" class="table table-bordered responsive-utilities">
+        <tr id="version">
+            <td valign="top" width="100" class="td_lable lang"  langKey="Version">
+                Version
+            </td>
+            <td id="DruidVersion" width="95%">1.0</td>
+        </tr>
+    </table>
+</div>
+<script type="text/javascript">
+    $.namespace("druid.index");
+    druid.index = function () {
+        return  {
+            init : function() {
+                druid.common.buildHead(0);
+                this.ajaxRequestForBasicInfo();
+            },
+
+            ajaxRequestForBasicInfo : function() {
+                $.ajax({
+                    type: 'GET',
+                    url: "basicInfo.json",
+                    success: function(data) {
+                        var content = data.Content;
+                        var html = test(content);
+                        $("#version").after(html);
+                        druid.lang.trigger();
+                    },
+                    dataType: "json"
+                });
+            }
+        }
+    }();
+
+    $(document).ready(function() {
+        druid.index.init();
+    });
+    function test(context){
+        var out ='';
+        for(var key in context){
+            if( key != "JavaClassPath")
+                out +='<tr><td valign="top" class="td_lable lang" > '+key+'</td><td> '+context[key]+'</td></tr>'
+            else
+                out += '<tr><td valign="top" class="td_lable lang" > '+key+'</td><td> '+context[key].split(/;/).join("<br/>")+'</td></tr>'
+        }
+        return out;
+    }
+</script>
+</body>
+</html>

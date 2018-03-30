@@ -1,0 +1,173 @@
+<!doctype html>
+<html>
+<head>
+    <title>WebApp Log Stat</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf8"/>
+    <link href='css/bootstrap.min.css' rel="stylesheet"/>
+    <link href="css/style.css" type="text/css" rel="stylesheet"/>
+    <script src="js/doT.js" type="text/javascript" charset="utf8"></script>
+    <script type="text/javascript" src="js/jquery.min.js"></script>
+    <script type="text/javascript" src="js/bootstrap.min.js"></script>
+    <script src="js/lang.js" type="text/javascript" charset="utf8"></script>
+    <script src="js/common.js" type="text/javascript" charset="utf8"></script>
+</head>
+<body>
+<div class="container">
+    <form class="navbar-form navbar-left" role="search">
+        <div class="form-group">
+            <input type="text" class="form-control" style="margin-left: 24%;" id="search"/>
+            <button type="button" class="btn btn-default" style="margin-top: 4.5px;" onclick="logSearch()">Search
+            </button>
+        </div>
+    </form>
+</div>
+<div class="container-fluid">
+    <div class="row-fluid">
+        <div class="span12">
+            <h3>
+                WebAppLogStat List
+                <a href="webapp.json" target="_blank">View JSON API</a>
+            </h3>
+        </div>
+    </div>
+</div>
+<script type="text/template" id="webapp-template">
+    {{~ it.content :contextNow:i  }}
+    <ul class="nav nav-tabs" id="datasourceTab{{=i}}">
+        <li class="active">
+            <a href="webapp.html#dstab/{{=contextNow.ContextPath}}">WebApp-{{=contextNow.ContextPath}}</a>
+        </li>
+    </ul>
+    <div class="tab-content">
+        <div class="tab-pane active" id="dstab/{{=contextNow.ContextPath}}">
+            <table class="table table-bordered" style="background-color: #fff">
+                <tbody>
+                {{ for(var key in contextNow ) { }}
+                <tr>
+                    <td valign="top" class="td_lable lang" langKey="{{=key}}">{{=key}}</td>
+                    <td>{{=contextNow[key]}}</td>
+                </tr>
+                {{ } }}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {{~ }}
+</script>
+<script type="text/javascript">
+    $.namespace("druid.datasource");
+    druid.datasource = function () {
+
+        return {
+            init: function () {
+                druid.common.buildHead(4);
+                ajaxRequestForBasicInfo({"pageNow": 1 });
+            }
+        }
+    }();
+
+    $(document).ready(function () {
+        druid.datasource.init();
+    });
+
+    function ajaxRequestForBasicInfo(data) {
+        $.ajax({
+            type: 'GET',
+            url: "logList.json",
+            data:data,
+            success: function (data) {
+                var datasourceList = data.Content;
+                var arr = new Array();
+                for (var item in datasourceList) {
+                    datasourceList[item].name =  item ;
+                    arr.push(datasourceList[item]);
+                }
+                var tmpl = $('#webapp-template').html();
+                var contents = {'content': arr};
+                var doTtmpl = doT.template(tmpl);
+                var contentHtml = test(contents);
+                var h3Html = $(".span12").children()[0];
+                $(".span12").empty();
+                $(".span12")[0].innerHTML = h3Html.outerHTML;
+                $(".span12 h3").after(contentHtml);
+                $("#pageId").remove();
+                $(".footer").before(pageView(data));
+                $('#datasourceTab a').click(function (e) {
+                    e.preventDefault();
+                    $(this).tab('show');
+                });
+                druid.lang.trigger();
+            },
+            dataType: "json"
+        });
+    }
+    function test(it) {
+        var out = ' ';
+        var arr1 = it.content;
+        if (arr1) {
+            var contextNow, i = -1, l1 = arr1.length - 1;
+            while (i < l1) {
+                contextNow = arr1[i += 1];
+                out += '<div class="tab-content"> <div class="tab-pane active"> <table class="table table-bordered" style="background-color: #fff"> <tbody> ';
+
+                out += ' <tr> <td valign="top" class="td_lable lang" style="width:40%;" langKey="' + (contextNow.name) + '">' +  contextNow.name +
+                    '</td> <td id="' + (contextNow.name) + '"> 日志级别：' + contextNow.level + '</td> ' +
+                    '<td style="width:15%;">修改日志级别：<a href="#"><select onchange=changeLogLevel(this,"' + contextNow.name + '")>' +
+                    '<option value="">-请选择-</option><option value="DEBUG">DEBUG</option><option value="INFO">INFO</option>' +
+                    '<option value="WARN">WARN</option><option value="ERROR">ERROR</option><option value="TRACE">TRACE</option>' +
+                    '</select></a></td></tr> ';
+                out += ' </tbody> </table> </div></div>  ';
+            }
+        }
+        return out;
+    }
+
+    function changeLogLevel(it, logClass) {
+        if(it.value == undefined || it.value == ""){
+            return;
+        }
+        $.ajax({
+            type: 'GET',
+            url: "changeLogLevel.json",
+            data: {"logClass": logClass, "level": it.value},
+            success: function (data) {
+                if ("SUCCESS" == data.Content) {
+                    //刷新前端页面
+                    ajaxRequestForBasicInfo();
+                }
+                else {
+                    $("#alertInfo").show();
+                    $("#loginForm")[0].reset();
+                    $("input[name=loginUsername]").focus();
+                }
+            },
+            dataType: "json"
+        });
+    }
+    function logSearch() {
+        ajaxRequestForBasicInfo({"keyWord": $('#search').val()});
+    }
+
+    function pageView(data){
+        if(data.pageBean != undefined){
+            var out = '<div class="container" id="pageId">  <div class="pagination-centered" style="margin-left: 24%;"> <ul class="pagination"> ';
+            var arr1 = data.pageBean;
+            if (arr1) {
+                var pageCount = arr1.pageCount;
+                var index = 1;
+                while (index <= pageCount) {
+                    out += '<li><a href="#" onclick="queryPageData(this)">'+ (index++) +'</a></li>'
+                }
+                out += '</ul> </div></div>  ';
+            }
+            return out;
+        }
+    }
+    function queryPageData(item) {
+        var serach ={"keyWord": $('#search').val(),"pageNow": item.innerText };
+        console.log(serach);
+        ajaxRequestForBasicInfo(serach);
+    }
+</script>
+</body>
+</html>
