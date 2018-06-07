@@ -5,3 +5,4 @@ POST /job/dynamic-log/build    403 Forbidden </br>
 POST /job/dynamic-log/build    403 No valid crumb was included in the request </br>
 2、配置为工程的代码库绑定hook</br>
 3、更新代码触发hook</br>
+4、去Jenkins查看任务是否执行
